@@ -155,6 +155,8 @@ def render_ollama_connector(
           <div class="row">
             <input type="text" id="endpoint-input" value="http://127.0.0.1:11434" title="Your Laptop Ollama URL" />
             <button id="btn-check" class="btn-secondary" onclick="checkOllama()">Check Local Ollama</button>
+            <button class="btn-secondary" style="font-size: 11px; padding: 6px 10px;" onclick="setEndpoint('http://127.0.0.1:11434')">Use 127.0.0.1</button>
+            <button class="btn-secondary" style="font-size: 11px; padding: 6px 10px;" onclick="setEndpoint('http://localhost:11434')">Use localhost</button>
           </div>
         </div>
 
@@ -193,8 +195,23 @@ def render_ollama_connector(
 
         document.getElementById("endpoint-input").value = defaultEndpoint;
 
+        function setEndpoint(url) {{
+          document.getElementById("endpoint-input").value = url;
+          checkOllama();
+        }}
+
+        async function fetchTags(url) {{
+          const res = await fetch(`${{url}}/api/tags`, {{
+            method: "GET",
+            headers: {{ "Accept": "application/json" }},
+          }});
+          if (!res.ok) throw new Error(`Status ${{res.status}}`);
+          return await res.json();
+        }}
+
         async function checkOllama() {{
-          const endpoint = document.getElementById("endpoint-input").value.trim().replace(/\\/$/, "");
+          const inputEl = document.getElementById("endpoint-input");
+          let endpoint = inputEl.value.trim().replace(/\\/$/, "");
           const badgeOllama = document.getElementById("badge-ollama");
           const badgeModel = document.getElementById("badge-model");
           const errorBox = document.getElementById("error-box");
@@ -204,17 +221,32 @@ def render_ollama_connector(
           badgeOllama.textContent = "Checking...";
           errorBox.style.display = "none";
 
+          let data = null;
+          let successfulEndpoint = endpoint;
+
+          // Attempt 1: primary user endpoint
           try {{
-            const res = await fetch(`${{endpoint}}/api/tags`, {{
-              method: "GET",
-              headers: {{ "Accept": "application/json" }},
-            }});
-
-            if (!res.ok) {{
-              throw new Error(`Ollama returned status ${{res.status}}`);
+            data = await fetchTags(endpoint);
+          }} catch (err1) {{
+            // Attempt 2: fallback toggle between 127.0.0.1 and localhost
+            try {{
+              let fallback = "";
+              if (endpoint.includes("127.0.0.1")) {{
+                fallback = endpoint.replace("127.0.0.1", "localhost");
+              }} else if (endpoint.includes("localhost")) {{
+                fallback = endpoint.replace("localhost", "127.0.0.1");
+              }}
+              if (fallback) {{
+                data = await fetchTags(fallback);
+                successfulEndpoint = fallback;
+                inputEl.value = fallback;
+              }}
+            }} catch (err2) {{
+              data = null;
             }}
+          }}
 
-            const data = await res.json();
+          if (data && data.models) {{
             const models = (data.models || []).map(m => m.name || "");
             isOllamaOnline = true;
             badgeOllama.className = "badge badge-success";
@@ -232,9 +264,9 @@ def render_ollama_connector(
               isModelReady = false;
               badgeModel.className = "badge badge-warning";
               badgeModel.textContent = `Model Missing`;
-              showError(`Ollama is running, but <strong>${{modelName}}</strong> was not found. Please open a terminal on your laptop and run: <br/><span class="code-snippet">ollama pull ${{modelName}}</span>`);
+              showError(`Ollama is connected at ${{successfulEndpoint}}, but <strong>${{modelName}}</strong> was not found. Please open a terminal on your laptop and run: <br/><span class="code-snippet">ollama pull ${{modelName}}</span>`);
             }}
-          }} catch (err) {{
+          }} else {{
             isOllamaOnline = false;
             isModelReady = false;
             btnGen.disabled = true;
@@ -244,12 +276,12 @@ def render_ollama_connector(
             badgeModel.textContent = `Model: ${{modelName}}`;
 
             showError(
+              `<div style="line-height: 1.6;">` +
               `<strong>Browser cannot connect to local Ollama at ${{endpoint}}:</strong><br/>` +
-              `1. Ensure Ollama is running on your laptop (<span class="code-snippet">ollama serve</span>).<br/>` +
-              `2. Allow cross-origin requests by setting on your laptop:<br/>` +
-              `&nbsp;&nbsp;&nbsp;<strong>Windows (PowerShell):</strong> <span class="code-snippet">$env:OLLAMA_ORIGINS="*"</span> then run <span class="code-snippet">ollama serve</span><br/>` +
-              `&nbsp;&nbsp;&nbsp;<strong>Mac/Linux:</strong> <span class="code-snippet">OLLAMA_ORIGINS="*" ollama serve</span><br/>` +
-              `3. <strong>Browser Mixed Content:</strong> In Chrome/Edge, click the tune/padlock icon next to the URL &rarr; <em>Site settings</em> &rarr; set <em>Insecure content</em> to <strong>Allow</strong>.`
+              `&bull; <strong>Step 1 (Mixed Content / Browser Permissions):</strong> Since this app is on HTTPS, Chrome/Edge blocks calls to local HTTP by default. Click the <strong>🔒 / 🎛️ (Site settings)</strong> icon next to the URL at the top left &rarr; click <strong>Site settings</strong> &rarr; find <strong>Insecure content</strong> and set it to <strong>Allow</strong> &rarr; return and refresh (F5).<br/>` +
+              `&bull; <strong>Step 2 (Start Ollama on Laptop):</strong> In PowerShell, make sure Ollama is running: <span class="code-snippet">ollama serve</span><br/>` +
+              `&bull; <strong>Step 3 (CORS Access):</strong> Ollama must accept browser requests. Ensure you have set: <span class="code-snippet">$env:OLLAMA_ORIGINS="*"</span> before running <span class="code-snippet">ollama serve</span>.` +
+              `</div>`
             );
           }}
         }}

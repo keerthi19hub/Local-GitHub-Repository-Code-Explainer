@@ -240,21 +240,35 @@ if res:
         st.subheader("Detailed AI Explanation (Qwen 2.5 3B)")
         st.caption("Generated through your laptop's local Ollama instance using the grounded evidence context.")
 
+        st.info(
+            "💡 **Connecting to your Local Laptop's Ollama from this Web Page:**\n\n"
+            "1. **Start Ollama:** Make sure Ollama is running on your laptop (`ollama serve`).\n"
+            "2. **Browser Permission (1-time):** Because Streamlit Cloud runs on HTTPS, Chrome/Edge blocks calls to local HTTP by default. "
+            "Click the **🔒 / 🎛️ (Site Settings)** icon left of the URL in your browser's address bar → Click **Site settings** → Set **Insecure content** to **Allow** → Return and Refresh (`F5`).\n"
+            "3. Click **Check Local Ollama** below → It turns **🟢 CONNECTED** → Click **⚡ Generate Explanation** to stream live Qwen inference!"
+        )
+
         # Browser-side local Ollama streaming connector
         st.markdown("#### Browser-Side Local Ollama Connector")
         render_ollama_connector(
             prompt=res.llm_prompt,
             default_endpoint="http://127.0.0.1:11434",
             model_name="qwen2.5:3b",
-            height=580,
+            height=620,
             auto_check=True,
         )
 
         st.divider()
 
+        # Terminal CLI alternative
+        with st.expander("Terminal Alternative: Run Grounded Prompt directly in your Laptop CLI"):
+            st.caption("You can also copy the prompt directly into your local terminal:")
+            st.code("ollama run qwen2.5:3b", language="powershell")
+            st.text_area("Full Grounded Qwen Prompt", value=res.llm_prompt, height=180, key="prompt_copy_box")
+
         # Optional Direct Python Local Fallback (useful for local development)
-        with st.expander("Local Development Direct Inference (Python Localhost Fallback)"):
-            st.caption("When running locally on your laptop, you can also trigger inference directly via Python.")
+        with st.expander("Local Development Direct Inference (When running 'streamlit run app.py' on laptop)"):
+            st.caption("When running locally on your laptop, Python can also communicate directly with Ollama without browser CORS.")
             if st.button("Run Direct Python Inference on Localhost", key="btn_direct_infer"):
                 with st.spinner("Connecting to local Ollama (qwen2.5:3b)..."):
                     try:
