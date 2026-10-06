@@ -245,11 +245,11 @@ def render_ollama_connector(
 
             showError(
               `<strong>Browser cannot connect to local Ollama at ${{endpoint}}:</strong><br/>` +
-              `1. Ensure Ollama is installed and running (<span class="code-snippet">ollama serve</span>).<br/>` +
-              `2. Allow browser origin access by setting the environment variable on your laptop:<br/>` +
-              `&nbsp;&nbsp;&nbsp;<strong>Windows:</strong> <span class="code-snippet">$env:OLLAMA_ORIGINS="*"</span> then restart Ollama.<br/>` +
+              `1. Ensure Ollama is running on your laptop (<span class="code-snippet">ollama serve</span>).<br/>` +
+              `2. Allow cross-origin requests by setting on your laptop:<br/>` +
+              `&nbsp;&nbsp;&nbsp;<strong>Windows (PowerShell):</strong> <span class="code-snippet">$env:OLLAMA_ORIGINS="*"</span> then run <span class="code-snippet">ollama serve</span><br/>` +
               `&nbsp;&nbsp;&nbsp;<strong>Mac/Linux:</strong> <span class="code-snippet">OLLAMA_ORIGINS="*" ollama serve</span><br/>` +
-              `3. If on HTTPS Streamlit Cloud, allow insecure localhost connections in your browser site settings.`
+              `3. <strong>Browser Mixed Content:</strong> In Chrome/Edge, click the tune/padlock icon next to the URL &rarr; <em>Site settings</em> &rarr; set <em>Insecure content</em> to <strong>Allow</strong>.`
             );
           }}
         }}
